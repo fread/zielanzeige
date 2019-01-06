@@ -19,32 +19,51 @@ void shiftout(uint8_t bit)
 	PORTB = 0;
 }
 
+uint8_t buffer[120];
+
+void write_letter_at(int startcol, uint8_t letter) {
+	for (int8_t x = 0; x < 5; x++) {
+		if (startcol + x >= 0 && startcol + x < width) {
+			buffer[startcol + x] = pgm_read_byte_near(&font_5x7_col[letter][x]);
+		}
+	}
+}
+
 void setup()
 {
 	for (uint8_t i = 2; i <= 10; i++) {
 		pinMode(i, OUTPUT);
 	}
 	pinMode(13, OUTPUT);
+
+	write_letter_at(0,  'H');
+	write_letter_at(6,  'i');
+	write_letter_at(12, '!');
 }
 
-char *message = "Hello world!        ";
+const char *message = "N\x0f""chster Halt: Kronenplatz";
+
+void letters(int round) {
+	for (int i = 0; i < width; i++) {
+		buffer[i] = 0;
+	}
+
+	int pos = 0;
+	for (unsigned c = 0; c < strlen(message); c++) {
+		write_letter_at(round + pos, message[c]);
+		pos += 6;
+	}
+}
+
+int ticks = 0;
+int runde = 120;
 
 void loop()
 {
 	for (uint8_t y = 0; y < lines; y++) {
-		uint8_t letter = 0;
-		uint8_t lettercol = 0;
 		for (uint8_t x = 0; x < width; x++) {
-			if (lettercol == 5) {
-				lettercol = 0;
-				letter++;
-				shiftout(0);
-			} else {
-				uint8_t col = pgm_read_byte_near(&font_5x7_col[message[letter]][lettercol]);
-				uint8_t bit = (col & (1 << y)) ? 1 : 0;
-				shiftout(bit);
-				lettercol++;
-			}
+			uint8_t bit = (buffer[x] & (1 << y)) ? 1 : 0;
+			shiftout(bit);
 		}
 
 		digitalWrite(13, 1);
@@ -52,5 +71,17 @@ void loop()
 		delayMicroseconds(200);
 		digitalWrite(13, 0);
 		digitalWrite(line_pins[y], 0);
+	}
+
+	ticks++;
+	if (ticks == 8) {
+		ticks = 0;
+		runde--;
+
+		letters(runde);
+
+		if (runde == -(6 * (int)strlen(message))) {
+			runde = 120;
+		}
 	}
 }
