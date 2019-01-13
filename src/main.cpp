@@ -51,10 +51,12 @@ void receive_serial() {
 	if (Serial.available() > 0) {
 		char receivedChar = Serial.read();
 		if (receivedChar == '\n') {
-			message = newMessage;
+			if (message != newMessage) {
+				message = newMessage;
+				ticks = 0;
+				runde = 120;
+			}
 			newMessage = "";
-			ticks = 0;
-			runde = 120;
 		}
 		else if (receivedChar != '\r') {
 			newMessage += receivedChar;
