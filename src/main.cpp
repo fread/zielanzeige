@@ -20,6 +20,10 @@ void shiftout(uint8_t bit)
 }
 
 uint8_t buffer[120];
+String message = "N\x0f""chster Halt: Kronenplatz";
+String newMessage;
+int ticks = 0;
+int runde = 120;
 
 void write_letter_at(int startcol, uint8_t letter) {
 	for (int8_t x = 0; x < 5; x++) {
@@ -39,9 +43,26 @@ void setup()
 	write_letter_at(0,  'H');
 	write_letter_at(6,  'i');
 	write_letter_at(12, '!');
+
+	Serial.begin(9600);
 }
 
-const char *message = "N\x0f""chster Halt: Kronenplatz";
+void receive_serial() {
+	if (Serial.available() > 0) {
+		char receivedChar = Serial.read();
+		if (receivedChar == '\n') {
+			if (message != newMessage) {
+				message = newMessage;
+				ticks = 0;
+				runde = 120;
+			}
+			newMessage = "";
+		}
+		else if (receivedChar != '\r') {
+			newMessage += receivedChar;
+		}
+	}
+}
 
 void letters(int round) {
 	for (int i = 0; i < width; i++) {
@@ -49,14 +70,11 @@ void letters(int round) {
 	}
 
 	int pos = 0;
-	for (unsigned c = 0; c < strlen(message); c++) {
+	for (unsigned c = 0; c < message.length(); c++) {
 		write_letter_at(round + pos, message[c]);
 		pos += 6;
 	}
 }
-
-int ticks = 0;
-int runde = 120;
 
 void loop()
 {
@@ -80,8 +98,9 @@ void loop()
 
 		letters(runde);
 
-		if (runde == -(6 * (int)strlen(message))) {
+		if (runde == -(6 * (int)message.length())) {
 			runde = 120;
 		}
 	}
+	receive_serial();
 }
